@@ -1,0 +1,35 @@
+{
+  "name": "demo",
+  "hud": "OPENEDIT // CYBERPUNK",
+  "labels": {"v1": "开源模板", "v2": "素材到成片", "v3": "一份配置", "v4": "四件事"},
+  "assets": {
+    "p_main": "../../runs/demo/cover-src/person.png",
+    "object": "../../runs/demo/cover-src/object.png",
+    "compare_left": "../../runs/demo/cover-src/compare-left.jpg",
+    "compare_right": "../../runs/demo/cover-src/compare-right.jpg"
+  },
+  "v1": {
+    "title_34": ["一套开源的", "[kw]口播剪辑模板[/kw]"],
+    "title_43": ["一套开源的", "口播剪辑", "[kw]模板[/kw]"],
+    "badge": "基于 [en]OPENEDIT[/en]",
+    "hud_right": "DEMO // SYNTHETIC"
+  },
+  "v2": {
+    "title_34": ["从素材到成片", "只改[kw]一份配置[/kw]"],
+    "title_43": ["从素材到成片 只改[kw]一份配置[/kw]"],
+    "left_label": "录屏素材",
+    "right_label": "一键出片"
+  },
+  "v3": {
+    "title_34": ["[en]SCENES.JSON[/en]"],
+    "subtitle_34": ["一份配置[kw]出整条片[/kw]"],
+    "title_43": ["[en]SCENES.JSON[/en] [kw]出整条片[/kw]"],
+    "tag_top": "SRC ▸ TEMPLATE",
+    "tag_bottom": "COST ▸ $0.00"
+  },
+  "v4": {
+    "title_34": ["本地跑完", "[kw]四件事[/kw]"],
+    "title_43": ["本地跑完 [kw]四件事[/kw]"],
+    "tasks": ["本地[kw]转写[/kw]字幕", "人像[kw]贴纸[/kw]", "案例 + 清单", "配乐和音效"]
+  }
+}

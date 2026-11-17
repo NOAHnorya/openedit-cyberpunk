@@ -1,0 +1,82 @@
+{
+ "frames": 360,
+ "hud": "OPENEDIT // CYBERPUNK",
+ "keyWords": "开源@0.70 本地跑。@5.22 零付费，@9.52",
+ "hits": [9.52],
+ "sticker": {
+  "dir": "seg/sticker",
+  "case": {"left": -110, "width": 900},
+  "kp": {"left": 90, "width": 900}
+ },
+ "scenes": [
+  {
+   "t0": 0,
+   "t1": 2.56,
+   "mode": "kp",
+   "hud": "BOOT // OPEN SOURCE"
+  },
+  {
+   "t0": 2.56,
+   "t1": 5.92,
+   "mode": "case",
+   "hud": "CASE 01 // LOCAL",
+   "case": {
+    "items": [
+     {"video": "media/rec1.mp4", "at": 2.56, "ranges": "2.56-4.36"},
+     {"video": "media/rec2.mp4", "at": 4.36, "ranges": "4.36-5.92"}
+    ],
+    "boxes": [
+     {"x": 76, "y": 506, "w": 312, "h": 222, "ranges": "2.9-4.36", "fx": "pop"},
+     {"x": 76, "y": 506, "w": 312, "h": 222, "ranges": "4.6-5.92"}
+    ],
+    "insets": [
+     {"video": "media/rec1-zoom.mp4", "at": 2.56, "x": 600, "y": 720, "w": 420, "h": 302, "ranges": "3.05-4.36", "tag": "ZOOM ▸ STATUS"}
+    ],
+    "tags": [
+     {"text": "SRC ▸ OPENEDIT", "x": 640, "y": 452, "color": "r", "ranges": "2.56-4.36"},
+     {"text": "SRC ▸ MACOS VISION", "x": 572, "y": 452, "color": "r", "ranges": "4.36-5.92"},
+     {"text": "全在本地", "x": 600, "y": 880, "ranges": "5.22-5.92", "pop": true, "big": true}
+    ]
+   }
+  },
+  {
+   "t0": 5.92,
+   "t1": 9.4,
+   "mode": "kp",
+   "hud": "OBJECTIVES {n}/03"
+  },
+  {
+   "t0": 9.4,
+   "t1": 999,
+   "mode": "case",
+   "hud": "EOF // CLONE",
+   "hudRed": true,
+   "case": {
+    "items": [
+     {"image": "media/terminal.jpg", "style": "position:absolute;left:0;top:0;width:996px", "kf": "9.4,1,0,0;10.2,1,0,0;11.4,1.6,0,-357"}
+    ],
+    "tags": [
+     {"text": "SRC ▸ TERMINAL", "x": 700, "y": 452}
+    ]
+   }
+  }
+ ],
+ "titles": [
+  {"ranges": "0-2.56", "html": "一套开源的\n{kw:口播剪辑模板}"},
+  {"ranges": "2.56-5.92", "html": "基于 {ec:OPENEDIT}\n本地{kw:转写 · 抠像}"},
+  {"ranges": "5.92-9.4", "html": "{kw:一份}配置\n{ec:SCENES.JSON}"},
+  {"ranges": "9.4-999", "html": "{kw:零付费}\n克隆就能用", "fx": "glitch"}
+ ],
+ "cards": [
+  {"ranges": "1.24-2.56", "top": 220, "lbl": "OPEN SOURCE // MIT", "html": "{en:OPENEDIT} × {y:赛博朋克}"}
+ ],
+ "tasks": {
+  "ranges": "5.92-9.4",
+  "appear": 6.0,
+  "items": [
+   {"text": "{hl:案例}：素材框 + 特写", "on": "6.02-6.64"},
+   {"text": "{hl:清单}：逐条点亮", "on": "6.64-7.16"},
+   {"text": "{hl:卡片}：要点 · 警告", "on": "7.16-9.4", "subs": [["8.02-9.4", "都写在 scenes.json 里"]]}
+  ]
+ }
+}
