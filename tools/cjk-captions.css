@@ -1,0 +1,6 @@
+/* CJK fix for open-edit captions: see cjk-captions.js. Link it beside the page's own caption styles. */
+[data-captions] [data-line] {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+}

@@ -1,0 +1,146 @@
+<!doctype html><meta charset="utf-8"><script>
+const SR = 48000;
+const m2f = m => 440 * Math.pow(2, (m - 69) / 12);
+function noiseBuf(ctx, sec) { const b = ctx.createBuffer(1, Math.ceil(sec * ctx.sampleRate), ctx.sampleRate); const d = b.getChannelData(0); let s = 12345; for (let i = 0; i < d.length; i++) { s = (s * 16807) % 2147483647; d[i] = s / 1073741823.5 - 1; } return b; }
+function irBuf(ctx, sec, decay) { const n = Math.ceil(sec * ctx.sampleRate), b = ctx.createBuffer(2, n, ctx.sampleRate); let s = 777; for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let lp = 0; for (let i = 0; i < n; i++) { s = (s * 16807) % 2147483647; const r = s / 1073741823.5 - 1; lp += 0.35 * (r - lp); d[i] = lp * Math.pow(1 - i / n, decay); } } return b; }
+let NB;
+function noise(ctx, t, dur, dest) { const s = ctx.createBufferSource(); s.buffer = NB; s.loopStart = 0; s.loop = true; s.connect(dest); s.start(t, (t * 7.31) % 1.5); s.stop(t + dur); return s; }
+
+// ---------------- music ----------------
+async function renderMusic(variant, dur) {
+  const ctx = new OfflineAudioContext(2, Math.ceil(dur * SR), SR); NB = noiseBuf(ctx, 2);
+  const master = ctx.createGain(); master.gain.value = 0.9;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 2.5; comp.attack.value = 0.02; comp.release.value = 0.25;
+  master.connect(comp).connect(ctx.destination);
+  const verb = ctx.createConvolver(); verb.buffer = irBuf(ctx, variant === 'B' ? 3.5 : 2.4, 3); const verbG = ctx.createGain(); verbG.gain.value = 0.55; verb.connect(verbG).connect(master);
+  const pump = ctx.createGain(); pump.connect(master);           // sidechained bus (pad + bass)
+  const BPM = 90, beat = 60 / BPM, bar = 4 * beat;
+  const prog = [ // bass root, chord tones
+    { b: 45, c: [55, 59, 60, 64] },  // Am9 (G B C E over A)
+    { b: 41, c: [57, 60, 64, 65] },  // Fmaj7
+    { b: 48, c: [55, 59, 64, 67] },  // Cmaj7
+    { b: 43, c: [55, 59, 62, 64] }]; // G6
+  const nBars = Math.ceil(dur / bar);
+  // sections (seconds on the film): drums off in the intro bar and the outro, back in for the CTA
+  const drumsOn = t => (t >= 4.5 && t < 240.3) || (t >= 255.7 && t < dur - 3);
+  const keysOn = t => variant === 'A';
+  // pad
+  const padF = ctx.createBiquadFilter(); padF.type = 'lowpass'; padF.frequency.value = variant === 'B' ? 1100 : 1500; padF.Q.value = 0.4;
+  const padG = ctx.createGain(); padG.gain.value = variant === 'B' ? 0.6 : 0.5; padF.connect(padG); padG.connect(pump); padG.connect(verb);
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07; const lfoG = ctx.createGain(); lfoG.gain.value = variant === 'B' ? 250 : 300; lfo.connect(lfoG).connect(padF.frequency); lfo.start(0);
+  for (let i = 0; i < nBars; i++) {
+    const ch = prog[i % 4], t0 = i * bar;
+    for (const m of ch.c) for (const dt of [-7, 0, 7]) {
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = m2f(m); o.detune.value = dt;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.11, t0 + 0.5); g.gain.setValueAtTime(0.11, t0 + bar - 0.1); g.gain.linearRampToValueAtTime(0, t0 + bar + 0.7);
+      o.connect(g).connect(padF); o.start(t0); o.stop(t0 + bar + 0.8);
+    }
+  }
+  // bass
+  const bassF = ctx.createBiquadFilter(); bassF.type = 'lowpass'; bassF.frequency.value = variant === 'B' ? 700 : 520; bassF.Q.value = variant === 'B' ? 3 : 0.7;
+  const bassG = ctx.createGain(); bassG.gain.value = variant === 'B' ? 0.32 : 0.36; bassF.connect(bassG).connect(pump);
+  const bassPat = variant === 'B' ? [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5] : [0, 1.5, 2, 3.5];
+  for (let i = 0; i < nBars; i++) {
+    const ch = prog[i % 4];
+    for (const p of bassPat) {
+      const t = i * bar + p * beat, len = variant === 'B' ? beat * 0.42 : beat * 0.9;
+      for (const [type, mul, gn] of [['sine', 0.5, 0.25], ['sine', 1, 0.45], [variant === 'B' ? 'sawtooth' : 'triangle', 1, 0.4]]) {
+        const o = ctx.createOscillator(); o.type = type; o.frequency.value = m2f(ch.b) * mul;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gn, t + 0.01); g.gain.setTargetAtTime(gn * 0.6, t + 0.02, 0.15); g.gain.setTargetAtTime(0, t + len, 0.04);
+        o.connect(g).connect(bassF); o.start(t); o.stop(t + len + 0.3);
+      }
+    }
+  }
+  // electric-piano stabs (variant A): sine pair with fast decay, syncopated
+  if (variant === 'A') {
+    const epF = ctx.createBiquadFilter(); epF.type = 'lowpass'; epF.frequency.value = 2200;
+    const epG = ctx.createGain(); epG.gain.value = 0.4; epF.connect(epG); epG.connect(master); const epS = ctx.createGain(); epS.gain.value = 0.5; epG.connect(epS).connect(verb);
+    const hits = [[0.5, 0.9], [1.75, 0.6], [2.5, 0.8], [3.25, 0.5]];
+    for (let i = 0; i < nBars; i++) {
+      if (i % 8 === 7) continue;
+      const ch = prog[i % 4];
+      for (const [p, vel] of hits) {
+        const t = i * bar + p * beat;
+        for (const m of ch.c) {
+          const f = m2f(m + 12 * 0);
+          const car = ctx.createOscillator(); car.frequency.value = f;
+          const mod = ctx.createOscillator(); mod.frequency.value = f; const mg = ctx.createGain(); mg.gain.setValueAtTime(f * 0.9, t); mg.gain.exponentialRampToValueAtTime(f * 0.05, t + 0.5);
+          mod.connect(mg).connect(car.frequency);
+          const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.25 * vel, t + 0.006); g.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+          car.connect(g).connect(epF); car.start(t); mod.start(t); car.stop(t + 1.2); mod.stop(t + 1.2);
+        }
+      }
+    }
+  }
+  // drums
+  const drumG = ctx.createGain(); drumG.gain.value = variant === 'B' ? 0.85 : 0.75; drumG.connect(master);
+  for (let i = 0; i < Math.ceil(dur / beat); i++) {
+    const t = i * beat; if (!drumsOn(t)) continue;
+    const pos = i % 4;
+    if (pos === 0 || pos === 2 || (variant === 'A' && pos === 1 && i % 8 === 5)) { // kick
+      const tk = pos === 1 ? t + beat / 2 : t;
+      const o = ctx.createOscillator(); o.frequency.setValueAtTime(130, tk); o.frequency.exponentialRampToValueAtTime(42, tk + 0.12);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.5, tk); g.gain.exponentialRampToValueAtTime(0.001, tk + 0.38);
+      o.connect(g).connect(drumG); o.start(tk); o.stop(tk + 0.4);
+      const kb = ctx.createBiquadFilter(); kb.type = 'bandpass'; kb.frequency.value = 2200; kb.Q.value = 1; const kg = ctx.createGain(); kg.gain.setValueAtTime(0.18, tk); kg.gain.exponentialRampToValueAtTime(0.001, tk + 0.012); kb.connect(kg).connect(drumG); noise(ctx, tk, 0.015, kb);
+      pump.gain.setValueAtTime(0.55, tk); pump.gain.linearRampToValueAtTime(1, tk + 0.28);
+    }
+    if (pos === 1 || pos === 3) { // soft clap / snare: band-passed noise + body
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.9;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      bp.connect(g); g.connect(drumG); const sv = ctx.createGain(); sv.gain.value = 0.4; g.connect(sv).connect(verb); noise(ctx, t, 0.22, bp);
+      const o = ctx.createOscillator(); o.frequency.value = 185; const og = ctx.createGain(); og.gain.setValueAtTime(0.25, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.08); o.connect(og).connect(drumG); o.start(t); o.stop(t + 0.1);
+    }
+    for (const half of [0, 0.5]) { // hats: dark, quiet, swung
+      const th = t + half * beat + (half ? beat * 0.06 : 0);
+      const hp = ctx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 6000; hp.Q.value = 0.6;
+      const g = ctx.createGain(); g.gain.setValueAtTime(half ? 0.05 : 0.035, th); g.gain.exponentialRampToValueAtTime(0.001, th + 0.04);
+      hp.connect(g).connect(drumG); noise(ctx, th, 0.05, hp);
+    }
+  }
+  master.gain.setValueAtTime(0.9, dur - 3); master.gain.linearRampToValueAtTime(0, dur);
+  const buf = await ctx.startRendering(); window.__buf = buf; return buf.length;
+}
+
+// ---------------- sfx ----------------
+async function renderSfx(kind) {
+  const len = { glitch: 0.32, pop: 0.16, riser: 1.25, impact: 1.4 }[kind];
+  const ctx = new OfflineAudioContext(2, Math.ceil(len * SR), SR); NB = noiseBuf(ctx, 2);
+  const out = ctx.createGain(); out.connect(ctx.destination);
+  if (kind === 'glitch') { // digital stutter in the low-mids, no pitch sweep
+    const glp = ctx.createBiquadFilter(); glp.type = 'lowpass'; glp.frequency.value = 2200; glp.Q.value = 0.5; glp.connect(out); out.gain.value = 0.45;
+    const crush = ctx.createWaveShaper(); const c = new Float32Array(1024); for (let i = 0; i < 1024; i++) c[i] = Math.round((i / 511.5 - 1) * 5) / 5; crush.curve = c; crush.connect(glp);
+    const freqs = [110, 165, 82, 220, 123, 98];
+    for (let k = 0; k < 6; k++) {
+      const t = k * 0.048, d = 0.034;
+      const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = freqs[k];
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.5 * (1 - k * 0.12), t); g.gain.setValueAtTime(0, t + d);
+      o.connect(g).connect(crush); o.start(t); o.stop(t + d);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900 + 300 * (k % 2); bp.Q.value = 1.2;
+      const ng = ctx.createGain(); ng.gain.setValueAtTime(0.5 * (1 - k * 0.12), t); ng.gain.setValueAtTime(0, t + d * 0.7);
+      bp.connect(ng).connect(glp); noise(ctx, t, d, bp);
+    }
+  } else if (kind === 'pop') { // soft falling "boop"
+    const o = ctx.createOscillator(); o.frequency.setValueAtTime(520, 0); o.frequency.exponentialRampToValueAtTime(300, 0.07);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(0.7, 0.004); g.gain.exponentialRampToValueAtTime(0.001, 0.14);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800;
+    o.connect(g).connect(lp).connect(out); o.start(0); o.stop(0.15);
+  } else if (kind === 'riser') { // band-passed noise sweep that swells
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4; bp.frequency.setValueAtTime(250, 0); bp.frequency.exponentialRampToValueAtTime(3000, len);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.001, 0); g.gain.exponentialRampToValueAtTime(0.9, len - 0.02); g.gain.linearRampToValueAtTime(0, len);
+    bp.connect(g).connect(out); noise(ctx, 0, len, bp);
+  } else if (kind === 'impact') { // sub drop + dark noise burst
+    const o = ctx.createOscillator(); o.frequency.setValueAtTime(75, 0); o.frequency.exponentialRampToValueAtTime(32, 0.9);
+    const g = ctx.createGain(); g.gain.setValueAtTime(1, 0); g.gain.exponentialRampToValueAtTime(0.001, 1.2);
+    o.connect(g).connect(out); o.start(0); o.stop(1.3);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(2500, 0); lp.frequency.exponentialRampToValueAtTime(200, 0.4);
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.6, 0); ng.gain.exponentialRampToValueAtTime(0.001, 0.5);
+    lp.connect(ng).connect(out); noise(ctx, 0, 0.5, lp);
+  }
+  const buf = await ctx.startRendering(); window.__buf = buf; return buf.length;
+}
+function chunk(start, n) { const b = window.__buf, L = b.getChannelData(0), R = b.getChannelData(1); const end = Math.min(b.length, start + n); const a = new Int16Array((end - start) * 2);
+  let peak = window.__peak; for (let i = start; i < end; i++) { a[2 * (i - start)] = Math.max(-1, Math.min(1, L[i] / peak)) * 32767; a[2 * (i - start) + 1] = Math.max(-1, Math.min(1, R[i] / peak)) * 32767; }
+  let s = ''; const u = new Uint8Array(a.buffer); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
+function measurePeak() { const b = window.__buf; let p = 0; for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > p) p = v; } } window.__peak = p / 0.89; return p; }
+</script>

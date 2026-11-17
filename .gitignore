@@ -1,0 +1,19 @@
+# dependencies and environments
+node_modules/
+.venv/
+
+# per-user work and private files (see LOCAL.example.md)
+runs/
+local/
+LOCAL.md
+.open-edit-prefs.json
+
+# installed by `openedit init`, not part of this repo
+.claude/skills/open-edit/
+.agents/skills/open-edit/
+
+# optional local link/copy for Claude Code; the tracked skill is .agents/skills/koubo-edit/
+.claude/skills/koubo-edit
+
+.DS_Store
+__pycache__/
