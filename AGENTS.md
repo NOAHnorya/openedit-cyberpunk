@@ -22,8 +22,11 @@ tools/transcribe-local.sh <video> --lang en
 tools/transcribe-local.sh <video> --lang zh --model medium   # 更准；首次要 DOWNLOAD=1 下载模型
 ```
 
-- 带 faster-whisper 的 Python 按这个顺序找：环境变量 `WHISPER_PY` → 仓库里的 `.venv` → `~/OpenMontage/.venv`。都没有就建一个：
-  `python3 -m venv .venv && .venv/bin/pip install faster-whisper`。`tools/koubo/candidates.py` 用同样的顺序。
+- 带 faster-whisper 的 Python 按这个顺序找：环境变量 `WHISPER_PY` → 仓库里的 `.venv` → `~/OpenMontage/.venv`。`tools/koubo/candidates.py` 用同样的顺序。
+- 都没有就先跑 `./setup.sh`（第 5 步准备转写用的 Python）：设了 `WHISPER_PY` 就检查并用它；没设、仓库里还没有 `.venv`、
+  `~/OpenMontage/.venv` 又带 faster-whisper，就直接复用；否则建仓库 `.venv`，装 faster-whisper、numpy、pillow
+  （想跳过复用、强制建仓库 `.venv`：`SETUP_VENV=1 ./setup.sh`）。备选，手动建：
+  `python3 -m venv .venv && .venv/bin/pip install faster-whisper`。
 - 默认离线跑。某个模型第一次用要加 `DOWNLOAD=1` 从 Hugging Face 下载一次（国内需要代理时同时设 `HTTPS_PROXY`，地址写在 LOCAL.md）。
 - 写出 `runs/<key>/transcript.json`（`<key>` 是文件名去掉扩展名）。
 - 中文：自动加简体提示词（否则会出繁体），半角 `,?!:;` 转全角。
