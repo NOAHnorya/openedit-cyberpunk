@@ -2,14 +2,16 @@
 # 一键安装：依赖、open-edit skill、渲染用的 Chrome、本地转写，最后渲染合成样片 runs/demo/demo-final.mp4。
 # 只支持 macOS。可重复运行，装过的步骤会跳过。全程不登录 VEED、不用 FAL_KEY、不花钱。
 #
-# usage: ./setup.sh             安装 + 渲染样片（装好之后重跑约 1 分钟；第一次建 .venv、下载模型要多几分钟）
+# usage: ./setup.sh             安装 + 渲染样片（第一次约 4 分钟，下载约 650 MB；装好之后重跑约 45 秒）
 #        ./setup.sh --no-demo   只安装，不渲染样片
 #
 # 环境变量（都可以不设）：
 #   WHISPER_PY=<python>                 用已有的、带 faster-whisper 的 Python，不建 .venv
 #   SETUP_VENV=1                        有 ~/OpenMontage/.venv 也照样在仓库里建自己的 .venv
-#   HF_ENDPOINT=https://hf-mirror.com   连不上 Hugging Face 时从镜像下载 whisper 模型
-#   HTTPS_PROXY=<代理地址>              下载要走代理时自己设（脚本不写死代理；渲染样片时会去掉代理变量）
+#   HTTPS_PROXY=<代理地址>              下载要走代理时自己设（脚本不写死代理；渲染样片时会去掉代理变量）。
+#                                       国内直连 huggingface.co 会被重置，模型要靠它；开着 macOS 系统代理时 pip 和模型会自动走
+#   PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple   国内直连 PyPI 很慢时换清华镜像
+#   HF_ENDPOINT=https://hf-mirror.com   从镜像下载 whisper 模型（2026-11 实测时好时坏，大文件还会转回 HF 的 CDN）
 set -euo pipefail
 ROOT=${0:A:h}
 cd $ROOT
@@ -142,6 +144,7 @@ else
     fi
     [[ -x $VENV_PY ]] || $BASE_PY -m venv $ROOT/.venv
     print "   建 .venv（Python $pv），pip install faster-whisper numpy pillow（第一次约 1.5 分钟）"
+    [[ -n ${PIP_INDEX_URL:-} ]] || print "   卡在十几 kB/s 时（国内直连 PyPI 常见）：Ctrl-C，换镜像重跑 PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./setup.sh"
     $VENV_PY -m pip install -q --upgrade pip
     $VENV_PY -m pip install faster-whisper numpy pillow \
       || die "pip 安装失败。需要代理：HTTPS_PROXY=<代理地址> ./setup.sh；或换 PyPI 镜像：PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./setup.sh"
@@ -169,7 +172,7 @@ if HF_HUB_OFFLINE=1 $WPY -c $dl 1 >/dev/null 2>&1; then
 elif env -u HF_HUB_OFFLINE $WPY -c $dl 0; then
   ok "下载好了"
 else
-  die "模型下载失败。连不上 Hugging Face 时用镜像：HF_ENDPOINT=https://hf-mirror.com ./setup.sh（或设 HTTPS_PROXY=<代理地址>）"
+  die "模型下载失败。国内直连 Hugging Face 会被重置，要走代理：HTTPS_PROXY=<代理地址> ./setup.sh（也可以试镜像 HF_ENDPOINT=https://hf-mirror.com，时好时坏）"
 fi
 
 # 7. 合成样片：全程离线，渲染不挂代理

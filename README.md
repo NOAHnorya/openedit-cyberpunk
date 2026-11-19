@@ -16,7 +16,9 @@ claude      # 或 codex：在仓库根目录打开 agent
 
 新 Mac 先装 [Homebrew](https://brew.sh)（会顺带装 Xcode Command Line Tools，里面有 `git` 和 Python 3.9），再 `brew install node ffmpeg`。
 
-`./setup.sh` 先检查 macOS、Node ≥ 20.18.1、Python（≥ 3.9 且低于 3.15）和 ffmpeg，缺什么就打印对应的 `brew install …`。然后装 open-edit 0.10.0、渲染用的 Chrome 和本地转写，最后渲染样片 `runs/demo/demo-final.mp4`（1080×1920，12 秒）。第一次运行要下载约 650 MB：whisper small 模型约 490 MB、Chrome Headless Shell 约 95 MB、Python 依赖约 70 MB，预计 5–10 分钟。装好后重跑约 45 秒，装过的步骤会跳过。
+`./setup.sh` 先检查 macOS、Node ≥ 20.18.1、Python（≥ 3.9 且低于 3.15）和 ffmpeg，缺什么就打印对应的 `brew install …`。然后装 open-edit 0.10.0、渲染用的 Chrome 和本地转写，最后渲染样片 `runs/demo/demo-final.mp4`（1080×1920，12 秒）。第一次运行要下载约 650 MB：whisper small 模型约 490 MB、Chrome Headless Shell 约 95 MB、Python 依赖约 70 MB。实测从 clone 到出片约 4.5 分钟（2026-11，Apple Silicon，Python 的下载走代理）。装好后重跑约 45 秒，装过的步骤会跳过。
+
+国内网络：`git clone`、npm 和 Chrome 直连就能下。PyPI 直连实测只有 15–65 kB/s，装 Python 依赖要一个小时以上；huggingface.co 直连会被重置，模型下不了。所以第一次装最好带上代理：`HTTPS_PROXY=<代理地址> ./setup.sh`。开着 Clash 这类 macOS 系统代理时，pip 和模型下载会自动走它（Python 会读系统代理），不设也行。没有代理时，Python 依赖可以换清华镜像（见下表）；模型目前没有稳定的免代理下载办法。
 
 过程中反复出现的 `openedit: update available … 0.10.1` 可以不理：仓库锁定 0.10.0，升级要你同意（见 `AGENTS.md`）。下载模型时的 `HF_TOKEN` 提示也不用管。
 
@@ -25,8 +27,9 @@ claude      # 或 codex：在仓库根目录打开 agent
 | `--no-demo` | 只安装，不渲染样片 |
 | `WHISPER_PY=<python>` | 用一个已经装了 faster-whisper 的 Python，不建 `.venv` |
 | `SETUP_VENV=1` | 已装 OpenMontage 时，仍在仓库里建自己的 `.venv` |
-| `HF_ENDPOINT=https://hf-mirror.com` | 连不上 Hugging Face 时，从镜像下载 whisper 模型 |
-| `HTTPS_PROXY=<代理地址>` | 下载需要走代理时自己设。脚本里不写死代理，渲染样片前会去掉代理变量 |
+| `HTTPS_PROXY=<代理地址>` | 下载走代理，国内下 whisper 模型基本要靠它。脚本里不写死代理，渲染样片前会去掉代理变量 |
+| `PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple` | 国内直连 PyPI 太慢时，换清华镜像装 Python 依赖（实测 22 MB/s） |
+| `HF_ENDPOINT=https://hf-mirror.com` | 从镜像下载 whisper 模型。2026-11 实测接口时常报 500，大文件还会转回 HF 的 CDN，不一定下得动 |
 
 剪辑流程写在 `.agents/skills/koubo-edit/SKILL.md`。Codex 读 `AGENTS.md`；Claude Code 经 `CLAUDE.md` 读 `AGENTS.md`。两边都会被引导去读这份 skill。想让 Claude Code 把它列进 skill 列表，再建一个软链（可选）：
 
@@ -121,7 +124,7 @@ agent 按 skill 往下走，下面几处会停下来等你确认：
 
 openedit-cyberpunk lets Claude Code or Codex cut multi-take talking-head footage into a vertical (9:16) video with a cyberpunk motion-graphics package, then make Douyin covers, titles and a description. It sits on top of [open-edit](https://github.com/veedstudio/open-edit) and swaps open-edit's paid parts for local ones: faster-whisper for transcription, macOS Vision for person cut-outs, and Web Audio for cue sounds and the music bed. No VEED login, no `FAL_KEY`, no cost.
 
-- **Install:** `git clone https://github.com/NOAHnorya/openedit-cyberpunk.git && cd openedit-cyberpunk && ./setup.sh`, then open Claude Code or Codex in the repo. `setup.sh` checks prerequisites, installs everything and renders a 12-second synthetic demo to `runs/demo/demo-final.mp4`. `./setup.sh --help` lists the options.
+- **Install:** `git clone https://github.com/NOAHnorya/openedit-cyberpunk.git && cd openedit-cyberpunk && ./setup.sh`, then open Claude Code or Codex in the repo. `setup.sh` checks prerequisites, installs everything and renders a 12-second synthetic demo to `runs/demo/demo-final.mp4`. `./setup.sh --help` lists the options. First run downloads about 650 MB and took 4.5 minutes in testing. In mainland China, use `HTTPS_PROXY=<proxy> ./setup.sh`: without a proxy PyPI crawls and huggingface.co is unreachable.
 - **Your first cut:** put the takes, screen recordings and screenshots in one folder and tell the agent to cut them with the cyberpunk template. It follows `.agents/skills/koubo-edit/SKILL.md` and waits for your approval at the take list, the style drafts, the scene plan and the cover.
 - **Template:** one `scenes.json` per video. See `examples/demo/scenes.json` and section 10 of SKILL.md.
 - **Requirements:** macOS only (Vision, `say`, AppleScript); Node ≥ 20.18.1, Python 3.9–3.14 (not Homebrew's 3.15: onnxruntime has no wheels for it yet; `setup.sh` picks a suitable `python3.x`) and ffmpeg.
