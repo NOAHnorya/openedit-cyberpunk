@@ -2,7 +2,7 @@
 # 一键安装：依赖、open-edit skill、渲染用的 Chrome、本地转写，最后渲染合成样片 runs/demo/demo-final.mp4。
 # 只支持 macOS。可重复运行，装过的步骤会跳过。全程不登录 VEED、不用 FAL_KEY、不花钱。
 #
-# usage: ./setup.sh             安装 + 渲染样片（第一次约 4 分钟，下载约 650 MB；装好之后重跑约 45 秒）
+# usage: ./setup.sh             安装 + 渲染样片（第一次 2–5 分钟，看下载走不走代理，下载约 650 MB；装好之后重跑约 45 秒）
 #        ./setup.sh --no-demo   只安装，不渲染样片
 #
 # 环境变量（都可以不设）：
@@ -143,7 +143,7 @@ else
       $BASE_PY -m venv --clear $ROOT/.venv
     fi
     [[ -x $VENV_PY ]] || $BASE_PY -m venv $ROOT/.venv
-    print "   建 .venv（Python $pv），pip install faster-whisper numpy pillow（第一次约 1.5 分钟）"
+    print "   建 .venv（Python $pv），pip install faster-whisper numpy pillow（第一次约 1 分钟）"
     [[ -n ${PIP_INDEX_URL:-} ]] || print "   卡在十几 kB/s 时（国内直连 PyPI 常见）：Ctrl-C，换镜像重跑 PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./setup.sh"
     $VENV_PY -m pip install -q --upgrade pip
     $VENV_PY -m pip install faster-whisper numpy pillow \
