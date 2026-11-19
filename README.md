@@ -14,7 +14,11 @@ cd openedit-cyberpunk && ./setup.sh
 claude      # 或 codex：在仓库根目录打开 agent
 ```
 
-`./setup.sh` 先检查 macOS、Node ≥ 20.18.1、python3 ≥ 3.9 和 ffmpeg，缺什么就打印对应的 `brew install …`。然后装 open-edit 0.10.0、渲染用的 Chrome 和本地转写，最后渲染样片 `runs/demo/demo-final.mp4`（1080×1920，12 秒）。第一次运行要下载 Chrome（约 200 MB）和 whisper small 模型（约 500 MB），预计 5–10 分钟。装好后重跑约 1 分钟，装过的步骤会跳过。
+新 Mac 先装 [Homebrew](https://brew.sh)（会顺带装 Xcode Command Line Tools，里面有 `git` 和 Python 3.9），再 `brew install node ffmpeg`。
+
+`./setup.sh` 先检查 macOS、Node ≥ 20.18.1、Python（≥ 3.9 且低于 3.15）和 ffmpeg，缺什么就打印对应的 `brew install …`。然后装 open-edit 0.10.0、渲染用的 Chrome 和本地转写，最后渲染样片 `runs/demo/demo-final.mp4`（1080×1920，12 秒）。第一次运行要下载约 650 MB：whisper small 模型约 490 MB、Chrome Headless Shell 约 95 MB、Python 依赖约 70 MB，预计 5–10 分钟。装好后重跑约 45 秒，装过的步骤会跳过。
+
+过程中反复出现的 `openedit: update available … 0.10.1` 可以不理：仓库锁定 0.10.0，升级要你同意（见 `AGENTS.md`）。下载模型时的 `HF_TOKEN` 提示也不用管。
 
 | 参数 / 环境变量 | 作用 |
 |---|---|
@@ -90,8 +94,9 @@ agent 按 skill 往下走，下面几处会停下来等你确认：
 ## 系统要求
 
 - 只支持 macOS。抠像用 Vision（人像分割要 macOS 12 以上，物体抠图 `subject.js` 要 macOS 14 以上），样片配音用 `say`，桌面启动器是 AppleScript。已在 macOS 26（Apple Silicon）上验证。
-- Node ≥ 20.18.1、python3 ≥ 3.9、ffmpeg 和 ffprobe：`brew install node python ffmpeg`。
-- 约 1 GB 磁盘：Chrome Headless Shell 约 200 MB，whisper small 模型约 500 MB，另加 Python 依赖。
+- Node ≥ 20.18.1、ffmpeg 和 ffprobe：`brew install node ffmpeg`。
+- Python ≥ 3.9 且低于 3.15。Homebrew 的 `python` 现在是 3.15，faster-whisper 依赖的 onnxruntime 还没有 3.15 的安装包，所以 `setup.sh` 不用它，而是挑一个 `python3.14` 到 `python3.10` 来建 `.venv`，都没有就用系统自带的 3.9。想用新一点的：`brew install python@3.13`。
+- 约 1.1 GB 磁盘：Chrome Headless Shell 约 200 MB，whisper small 模型约 490 MB，`.venv` 约 230 MB，pip 缓存约 70 MB。
 - 不需要 GPU，转写在 CPU 上跑（int8）。
 - 已经装过 [OpenMontage](https://github.com/calesthio/OpenMontage) 的话，会直接复用它的 `.venv`，不再装一遍 faster-whisper。
 
@@ -119,6 +124,6 @@ openedit-cyberpunk lets Claude Code or Codex cut multi-take talking-head footage
 - **Install:** `git clone https://github.com/NOAHnorya/openedit-cyberpunk.git && cd openedit-cyberpunk && ./setup.sh`, then open Claude Code or Codex in the repo. `setup.sh` checks prerequisites, installs everything and renders a 12-second synthetic demo to `runs/demo/demo-final.mp4`. `./setup.sh --help` lists the options.
 - **Your first cut:** put the takes, screen recordings and screenshots in one folder and tell the agent to cut them with the cyberpunk template. It follows `.agents/skills/koubo-edit/SKILL.md` and waits for your approval at the take list, the style drafts, the scene plan and the cover.
 - **Template:** one `scenes.json` per video. See `examples/demo/scenes.json` and section 10 of SKILL.md.
-- **Requirements:** macOS only (Vision, `say`, AppleScript); Node ≥ 20.18.1, Python ≥ 3.9 and ffmpeg.
+- **Requirements:** macOS only (Vision, `say`, AppleScript); Node ≥ 20.18.1, Python 3.9–3.14 (not Homebrew's 3.15: onnxruntime has no wheels for it yet; `setup.sh` picks a suitable `python3.x`) and ffmpeg.
 - **Language:** the docs, the skill and the defaults are written for Chinese videos. Transcription also accepts `--lang en`.
 - **License:** code is MIT; the bundled fonts are SIL OFL 1.1; see `THIRD_PARTY.md`. Credits: open-edit (Apache-2.0), OpenMontage (AGPL-3.0, no code included), faster-whisper (MIT), and the authors of ZCOOL QingKe HuangYou, Rajdhani, Share Tech Mono and Chakra Petch.

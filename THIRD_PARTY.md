@@ -26,7 +26,7 @@
 | Pillow | 样片素材、贴纸描边、封面 | MIT-CMU（HPND） | pip |
 | NumPy | 去背景闪烁、混音时算人声电平 | BSD-3-Clause | pip |
 | FFmpeg / ffprobe | 剪切、抽帧、编码 | LGPL-2.1+ 或 GPL（看你装的版本） | `brew install ffmpeg` |
-| Node.js、Python | 运行环境 | 各自的授权 | `brew install node python` |
+| Node.js、Python | 运行环境 | 各自的授权 | `brew install node`；Python 用系统自带的 3.9 或 `brew install python@3.13`（3.15 还不行，见 README「系统要求」） |
 | macOS Vision、`say`、`osascript` | 人像分割和主体抠图、样片配音、启动器 | Apple 系统组件 | macOS 自带 |
 | [OpenMontage](https://github.com/calesthio/OpenMontage) | 本地转写的思路；你已经装了它的话，复用 `~/OpenMontage/.venv` 里的 faster-whisper | AGPL-3.0 | 本仓库不含它的代码，也不会替你安装 |
 

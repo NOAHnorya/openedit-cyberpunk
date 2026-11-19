@@ -3,7 +3,7 @@
 # usage: tools/transcribe-local.sh <video> [--lang zh|en|...] [--model small|medium|large-v3] [--hint 'Claude Code, OpenEdit'] [--force]
 #   --hint: names/terms said in the clip, spelled as they should appear (fixes misheard and split English words)
 # Python with faster-whisper, first found: $WHISPER_PY -> <repo>/.venv -> ~/OpenMontage/.venv
-#   (create one with: python3 -m venv .venv && .venv/bin/pip install faster-whisper)
+#   (create one with ./setup.sh, which picks a Python 3.9-3.14: onnxruntime has no 3.15 wheels yet)
 # Runs offline by default. The first run of a model downloads it once from Hugging Face:
 #   set DOWNLOAD=1 for that run (behind a proxy, also set HTTPS_PROXY).
 set -euo pipefail
@@ -18,7 +18,7 @@ else
     [[ -x $c ]] && { py=$c; break; }
   done
 fi
-[[ -n $py ]] || { echo "no Python with faster-whisper: set WHISPER_PY, or run: python3 -m venv $ws/.venv && $ws/.venv/bin/pip install faster-whisper" >&2; exit 1; }
+[[ -n $py ]] || { echo "no Python with faster-whisper: set WHISPER_PY, or run $ws/setup.sh (it builds .venv with a Python 3.9-3.14)" >&2; exit 1; }
 
 media=$1; shift
 lang=""; model=small; hint=""; force=()

@@ -24,7 +24,7 @@ if not os.environ.get('KOUBO_WHISPER_PY_RUNNING'):
 try:
     from faster_whisper import WhisperModel
 except ImportError:
-    sys.exit('faster-whisper not found: set WHISPER_PY, or run: python3 -m venv .venv && .venv/bin/pip install faster-whisper')
+    sys.exit('faster-whisper not found: set WHISPER_PY, or run ./setup.sh (it builds .venv with a Python 3.9-3.14)')
 spec = json.load(open(sys.argv[1])); SR = 16000; cache = {}
 def pcm(src):
     if src not in cache:

@@ -15,6 +15,7 @@ ROOT=${0:A:h}
 cd $ROOT
 CLI=@veedstudio/openedit-cli
 CLI_VERSION=0.10.0                       # 和 package.json 锁定的版本一致
+PY_TOO_NEW=3.15                          # faster-whisper 依赖的 onnxruntime 还没有 3.15 的 wheel（2026-11 查过），出了再调高
 OE=$ROOT/node_modules/.bin/openedit
 VENV_PY=$ROOT/.venv/bin/python
 OM_PY=$HOME/OpenMontage/.venv/bin/python
@@ -34,6 +35,8 @@ ver_ge() {  # ver_ge <有的版本> <要求的版本>
 has() {  # has <python> "<模块, 模块>"：这个 Python 能不能 import 这些模块
   [[ -n $1 ]] && command -v $1 >/dev/null && $1 -c "import $2" >/dev/null 2>&1
 }
+pyver() { $1 -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])' 2>/dev/null }
+py_ok() { [[ -n $1 ]] && ver_ge $1 3.9 && ! ver_ge $1 $PY_TOO_NEW }   # py_ok <版本>：能不能拿来建 .venv
 
 demo=1
 for a in "$@"; do
@@ -53,9 +56,18 @@ if command -v node >/dev/null && command -v npm >/dev/null; then nv=${$(node -v)
 if [[ -z $nv ]] || ! ver_ge $nv 20.18.1; then   # openedit-cli 0.10.0 要求 Node >= 20.18.1
   missing+=("Node ≥ 20.18${nv:+（现在是 $nv）}"); pkgs+=(node)
 fi
-command -v python3 >/dev/null && pv=$(python3 -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])' 2>/dev/null) || pv=""
-if [[ -z $pv ]] || ! ver_ge $pv 3.9; then
-  missing+=("python3 ≥ 3.9${pv:+（现在是 $pv）}"); pkgs+=(python)
+# 建 .venv 用的 Python：≥ 3.9 且低于 PY_TOO_NEW，新的优先。Homebrew 的 python 已经是 3.15，所以不能只看 python3；
+# 都没有时，Xcode Command Line Tools 自带的 /usr/bin/python3（3.9）也能用
+BASE_PY=""; pv3=""
+command -v python3 >/dev/null && pv3=$(pyver python3) || pv3=""
+for c in python3.14 python3.13 python3.12 python3.11 python3.10 python3 /usr/bin/python3; do
+  command -v $c >/dev/null || continue
+  v=$(pyver $c) || continue
+  if py_ok $v; then BASE_PY=$(command -v $c); pv=$v; break; fi
+done
+if [[ -z $BASE_PY ]]; then
+  missing+=("Python ≥ 3.9 且低于 $PY_TOO_NEW${pv3:+（python3 是 $pv3，faster-whisper 依赖的 onnxruntime 还没有它的安装包）}")
+  pkgs+=(python@3.13)
 fi
 if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then missing+=("ffmpeg 和 ffprobe"); pkgs+=(ffmpeg); fi
 if (( $#missing )); then
@@ -64,7 +76,7 @@ if (( $#missing )); then
   print "   装上之后重跑：brew install ${(j: :)pkgs} && ./setup.sh"
   exit 1
 fi
-ok "macOS $(sw_vers -productVersion)、Node $nv、Python $pv、$(ffmpeg -version | head -1 | cut -d' ' -f1-3)"
+ok "macOS $(sw_vers -productVersion)、Node $nv、Python $pv（${BASE_PY:t}）、$(ffmpeg -version | head -1 | cut -d' ' -f1-3)"
 
 # 2. npm 依赖：当前 registry（例如国内镜像）还没同步这个版本时，改用官方 registry 重试
 step "2/7 npm install（$CLI $CLI_VERSION）"
@@ -124,8 +136,12 @@ else
   if has $VENV_PY "faster_whisper, numpy, PIL"; then
     ok "仓库 .venv 已装好，跳过"
   else
-    [[ -x $VENV_PY ]] || python3 -m venv $ROOT/.venv
-    print "   建 .venv，pip install faster-whisper numpy pillow（第一次要几分钟）"
+    if [[ -x $VENV_PY ]] && ! py_ok "$(pyver $VENV_PY)"; then   # 例如以前用 Homebrew 的 3.15 建的，装不上 faster-whisper
+      note ".venv 是 Python $(pyver $VENV_PY)，装不上 faster-whisper，用 Python $pv 重建"
+      $BASE_PY -m venv --clear $ROOT/.venv
+    fi
+    [[ -x $VENV_PY ]] || $BASE_PY -m venv $ROOT/.venv
+    print "   建 .venv（Python $pv），pip install faster-whisper numpy pillow（第一次约 1.5 分钟）"
     $VENV_PY -m pip install -q --upgrade pip
     $VENV_PY -m pip install faster-whisper numpy pillow \
       || die "pip 安装失败。需要代理：HTTPS_PROXY=<代理地址> ./setup.sh；或换 PyPI 镜像：PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./setup.sh"
